@@ -1,0 +1,101 @@
+{
+    "workbench.colorTheme": "Sublime Monokai",
+    "workbench.iconTheme": "material-icon-theme",
+    "editor.multiCursorModifier": "ctrlCmd",
+    "editor.wordWrap": "on",
+    "editor.bracketPairColorization.independentColorPoolPerBracketType": true,
+    "editor.dragAndDrop": false,
+    "editor.dropIntoEditor.enabled": false,
+    "editor.experimentalWhitespaceRendering": "font",
+    "editor.tabCompletion": "on",
+    "editor.cursorBlinking": "solid",
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "explorer.confirmDragAndDrop": false,
+    "editor.fontFamily": "'monospace', Hasklug Nerd Font Mono,'Droid Sans Mono', 'monospace', monospace",
+    "editor.fontLigatures": true,
+    "editor.fontWeight": "400",
+    "prisma.showPrismaDataPlatformNotification": false,
+    "blade.format.enable": true,
+    "emmet.includeLanguages": {
+        "blade": "html"
+    },
+    "[jsonc]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "terminal.integrated.fontWeightBold": "bold",
+    "vscode-neovim.neovimExecutablePaths.win32": "/home/am/.local/bin/nvim",
+    "vscode-neovim.neovimExecutablePaths.linux": "/home/am/.local/bin/nvim",
+    "vscode-neovim.neovimExecutablePaths.darwin": "/home/am/.local/bin/nvim",
+    "editor.linkedEditing": true,
+    "window.menuBarVisibility": "compact",
+    "editor.minimap.enabled": true,
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "diffEditor.maxComputationTime": 0,
+    "supermaven.enable": {
+        "*": false
+    },
+    "liveServer.settings.host": "0.0.0.0",
+    "remote.localPortHost": "allInterfaces",
+    "window.customTitleBarVisibility": "auto",
+    "window.commandCenter": false,
+    "workbench.layoutControl.enabled": false,
+    "python.analysis.typeCheckingMode": "basic",
+    "git.ignoreMissingGitWarning": true,
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff"
+    },
+    "security.workspace.trust.untrustedFiles": "open",
+    "window.titleBarStyle": "native",
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "window.menuStyle": "native",
+    "diffEditor.renderSideBySide": false,
+    "git.confirmSync": false,
+    "diffEditor.ignoreTrimWhitespace": false,
+    "[typescript]": {
+        "editor.defaultFormatter": "vscode.typescript-language-features"
+    },
+    "terminal.integrated.stickyScroll.enabled": false,
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "vscode.typescript-language-features"
+    },
+    "git.ignoreRebaseWarning": true,
+    "notebook.lineNumbers": "on",
+    "git.smartCommitChanges": "tracked",
+    "git.suggestSmartCommit": false,
+    "githubPullRequests.queries": [
+        {
+            "label": "Copilot on My Behalf",
+            "query": "repo:${owner}/${repository} is:open author:copilot involves:${user}"
+        },
+        {
+            "label": "Local Pull Request Branches",
+            "query": "default"
+        },
+        {
+            "label": "Waiting For My Review",
+            "query": "repo:${owner}/${repository} is:open review-requested:${user}"
+        },
+        {
+            "label": "Created By Me",
+            "query": "repo:${owner}/${repository} is:open author:${user}"
+        },
+        {
+            "label": "All Open",
+            "query": "default"
+        }
+    ],
+    "workbench.startupEditor": "none",
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "editor.fontSize": 14,
+    "redhat.telemetry.enabled": false,
+    "gitlens.ai.model": "vscode",
+    "gitlens.ai.vscode.model": "copilot:gpt-4.1",
+    "chat.tools.terminal.enableAutoApprove": false,
+    "github.copilot.chat.responsesApiReasoningEffort": "high",
+    "git.autofetch": "all",
+    "git.autofetchPeriod": 60,
+}
