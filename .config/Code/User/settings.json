@@ -1,5 +1,4 @@
 {
-    "workbench.colorTheme": "Sublime Monokai",
     "workbench.iconTheme": "material-icon-theme",
     "editor.multiCursorModifier": "ctrlCmd",
     "editor.wordWrap": "on",
@@ -98,4 +97,5 @@
     "github.copilot.chat.responsesApiReasoningEffort": "high",
     "git.autofetch": "all",
     "git.autofetchPeriod": 60,
+    "workbench.colorTheme": "Sublime Monokai",
 }
