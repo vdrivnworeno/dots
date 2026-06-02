@@ -2,8 +2,13 @@
 	"data-root": "/home/am/.local/lib/docker",
   "default-address-pools": [
     {
-      "base": "10.0.0.0/16",
+      "base": "10.0.0.0/23",
       "size": 28
     }
-  ]
+  ],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
 }

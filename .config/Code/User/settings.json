@@ -95,7 +95,10 @@
     "gitlens.ai.vscode.model": "copilot:gpt-4.1",
     "chat.tools.terminal.enableAutoApprove": false,
     "github.copilot.chat.responsesApiReasoningEffort": "high",
-    "git.autofetch": "all",
-    "git.autofetchPeriod": 60,
+    "git.autofetch": true,
+    "git.autofetchPeriod": 15,
     "workbench.colorTheme": "Sublime Monokai",
+    "githubRepositories.autoFetch.interval": 15,
+    "azureRepos.autoFetch.interval": 15,
+    "scm.repositories.selectionMode": "single",
 }

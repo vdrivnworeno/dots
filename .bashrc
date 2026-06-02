@@ -149,30 +149,146 @@ function dotfiles.git {
 
 
 # PALM ENV, VARS AND FUNCTIONS
+# PALM ENV, VARS AND FUNCTIONS
 
-MAIN_AWS_PROFILE="palm-production"
 
 function palm.aws.auth {
-  aws sso login --profile $MAIN_AWS_PROFILE &&
-    eval "$(aws configure export-credentials --profile $MAIN_AWS_PROFILE --format env)"
-}
+PROD_AWS_PROFILE="palm-production"
+DEV_AWS_PROFILE="palm-development"
+DEFAULT_PROFILE="$DEV_AWS_PROFILE"
 
-function palm.data-pipeline.run {
-	test -z "$1" && return 0;
-	test -z "$2" && return 0;
-	test -z "$3" && return 0;
-	set -a && source .env && set +a;
-	START_DATE="$2" END_DATE="$3" ./gradlew --no-daemon run -Penvironment=local --args="local $1";
-}
+if test -z $1; then return 1; fi;
 
-function palm.identity-service.clean-env {
-	docker compose down --remove-orphans && \
-		docker volume prune --all --force && \
-		docker compose up -d && \
-		yarn migration:init-schema && \
-		yarn migration:run
+  if test "$1" == "PROD"; then DEFAULT_PROFILE="$PROD_AWS_PROFILE"; fi
 
-	if test "$1" == "start"; then
-		yarn start:debug
-	fi
-}
+  aws sso login --profile $DEFAULT_PROFILE && \
+    eval "$(aws configure export-credentials --profile $DEFAULT_PROFILE --format env)"
+      export AWS_PROFILE="$DEFAULT_PROFILE"
+    }
+
+    function palm.aws.k8s.auth {
+    local env="$1"
+    local region="us-east-1"
+    local profile cluster account context
+
+    case "${env:-DEV}" in
+      PROD)
+        profile="palm-production"
+        cluster="prod-eks"
+        ;;
+      DEV)
+        profile="palm-development"
+        cluster="dev-eks"
+        ;;
+      *)
+        echo "uso: palm.k8s.auth DEV|PROD"
+        return 1
+        ;;
+    esac
+
+    aws sso login --profile "$profile" || return 1
+    eval "$(aws configure export-credentials --profile "$profile" --format env)" || return 1
+
+    aws eks update-kubeconfig \
+      --region "$region" \
+      --name "$cluster" \
+      --profile "$profile" || return 1
+
+    account="$(aws sts get-caller-identity --query Account --output text)" || return 1
+    context="arn:aws:eks:${region}:${account}:cluster/${cluster}"
+
+    kubectl config use-context "$context" || return 1
+
+    export PALM_AWS_PROFILE="$profile"
+    export PALM_EKS_CLUSTER="$cluster"
+    export PALM_KUBE_CONTEXT="$context"
+
+    echo "$PALM_KUBE_CONTEXT"
+  }
+
+  function palm.airflow.scheduler-pod {
+  local namespace="${1:-ops-airflow}"
+
+  kubectl --context "$PALM_KUBE_CONTEXT" get pods -n "$namespace" \
+    -o name | grep scheduler | head -n 1 | sed 's|^pod/||'
+  }
+
+  function palm.airflow.enable {
+  local dag_id="$1"
+  local namespace="${2:-ops-airflow}"
+  local pod
+
+  if [[ -z "$dag_id" ]]; then
+    echo "uso: palm.airflow.enable DAG_ID [NAMESPACE]"
+    return 1
+  fi
+
+  pod="$(palm.airflow.scheduler-pod "$namespace")" || return 1
+  echo $pod
+
+  if [[ -z "$pod" ]]; then
+    echo "scheduler pod no encontrado"
+    return 1
+  fi
+
+  kubectl --context "$PALM_KUBE_CONTEXT" exec -n "$namespace" "$pod" -- \
+    airflow dags unpause "$dag_id"
+  }
+
+  function palm.airflow.trigger {
+  local dag_id="$1"
+  local config="$2"
+  local namespace="${3:-ops-airflow}"
+  local pod
+
+        #if [[ -z "$dag_id" || -z "$config" ]]; then
+        if [[ -z "$dag_id" ]]; then
+          echo "uso: palm.airflow.trigger DAG_ID LOGICAL_DATE [NAMESPACE]"
+          return 1
+        fi
+
+        pod="$(palm.airflow.scheduler-pod "$namespace")" || return 1
+        echo $pod
+
+        if [[ -z "$pod" ]]; then
+          echo "scheduler pod no encontrado"
+          return 1
+        fi
+
+        kubectl --context "$PALM_KUBE_CONTEXT" exec -n "$namespace" "$pod" -- \
+          airflow dags trigger "$dag_id" --conf "$config"
+        }
+
+        function palm.data-pipeline.prepare {
+
+        PROD_AWS_PROFILE="palm-production"
+        DEV_AWS_PROFILE="palm-development"
+        DEFAULT_PROFILE="$DEV_AWS_PROFILE"
+
+        if test -z $1; then return 1; fi;
+
+          if test "$1" == "PROD"; then DEFAULT_PROFILE="$PROD_AWS_PROFILE"; fi
+          palm.aws.auth ${DEFAULT_PROFILE};
+          bash script/credentials.sh;
+          set -a && source .env && set +a;
+        }
+
+        function palm.data-pipeline.run {
+        test -z "$1" && return 0;
+        test -z "$2" && return 0;
+        test -z "$3" && return 0;
+        set -a && source .env && set +a;
+        START_DATE="$2" END_DATE="$3" ./gradlew --no-daemon run -Penvironment=local --args="local event$1";
+      }
+
+      function palm.identity-service.clean-env {
+      docker-compose down --remove-orphans && \
+        docker volume prune --all --force && \
+        docker-compose up -d && \
+        yarn migration:init-schema && \
+        yarn migration:run
+
+      if test "$1" == "start"; then
+        yarn start:debug
+      fi
+    }
