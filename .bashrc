@@ -153,6 +153,7 @@ function dotfiles.git {
 
 
 function palm.aws.auth {
+
 PROD_AWS_PROFILE="palm-production"
 DEV_AWS_PROFILE="palm-development"
 DEFAULT_PROFILE="$DEV_AWS_PROFILE"
@@ -235,6 +236,29 @@ if test -z $1; then return 1; fi;
     airflow dags unpause "$dag_id"
   }
 
+  function palm.airflow.disable {
+  local dag_id="$1"
+  local namespace="${2:-ops-airflow}"
+  local pod
+
+  if [[ -z "$dag_id" ]]; then
+    echo "uso: palm.airflow.enable DAG_ID [NAMESPACE]"
+    return 1
+  fi
+
+  pod="$(palm.airflow.scheduler-pod "$namespace")" || return 1
+  echo $pod
+
+  if [[ -z "$pod" ]]; then
+    echo "scheduler pod no encontrado"
+    return 1
+  fi
+
+  kubectl --context "$PALM_KUBE_CONTEXT" exec -n "$namespace" "$pod" -- \
+    airflow dags pause "$dag_id"
+  }
+
+
   function palm.airflow.trigger {
   local dag_id="$1"
   local config="$2"
@@ -282,9 +306,8 @@ if test -z $1; then return 1; fi;
       }
 
       function palm.identity-service.clean-env {
-      docker-compose down --remove-orphans && \
-        docker volume prune --all --force && \
-        docker-compose up -d && \
+      docker compose down --remove-orphans --volumes && \
+        docker compose up -d && \
         yarn migration:init-schema && \
         yarn migration:run
 
@@ -292,3 +315,76 @@ if test -z $1; then return 1; fi;
         yarn start:debug
       fi
     }
+
+  function codex.palm {
+    CODEX_HOME="${HOME}/.codex-palm" codex "$@"
+  }
+
+  function codex.me {
+    CODEX_HOME="${HOME}/.codex" codex "$@"
+  }
+
+  # function opencode.palm {
+  #   export OPENCODE_CONFIG_DIR="${HOME}/.config/opencode-palm";
+  #   export OPENCODE_CONFIG="${OPENCODE_CONFIG_DIR}/opencode.json"
+  #   opencode "$@"
+  # }
+  #
+  # function opencode.me {
+  #   export OPENCODE_CONFIG_DIR="${HOME}/.config/opencode";
+  #   export OPENCODE_CONFIG="${OPENCODE_CONFIG_DIR}/opencode.json"
+  #   opencode "$@"
+  # }
+  
+function opencode.select {
+  CONF="${HOME}/.config"
+  STATE="${HOME}/.local/state"
+  SHARE="${HOME}/.local/share"
+  CACHE="${HOME}/.cache"
+  PALM="opencode-palm"
+  ME="opencode-me"
+  OC_PALM_CONF="$HOME/.config/opencode-palm"
+  OC_ME_CONF="$HOME/.config/opencode-me"
+  OC_CONF="${HOME}/.config/opencode"
+  PROFILE="$1"; shift;
+
+  function clean.oc {
+
+    for i in ${CONF} ${STATE} ${SHARE} ${CACHE}; do
+      echo "cleaning $i/opencode"
+      rm -rf $i/opencode || true;
+    done
+  }
+
+  function replace.oc {
+    OP="$1"
+    for i in ${CONF} ${STATE} ${SHARE} ${CACHE}; do
+      echo "replacing $i/${OP}"
+      ln -sf $i/${OP} $i/opencode;
+    done
+  }
+
+  if test -z $PROFILE; then
+    echo "uso: opencode.select PROFILE [COMMANDS...]"
+    echo "Profiles disponibles: palm, me"
+    return 1
+  fi
+
+  clean.oc
+
+  if test "$PROFILE" == "palm"; then
+    echo "Palm profile"
+    replace.oc $PALM
+  elif test "$PROFILE" == "me"; then
+    echo "Me profile"
+    replace.oc $ME
+  fi
+
+  opencode "$@"
+}
+
+  alias opencode.palm="opencode.select palm"
+  alias opencode.me="opencode.select me"
+  alias oc.palm="opencode.palm"
+  alias oc.me="opencode.me"
+
