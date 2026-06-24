@@ -154,67 +154,71 @@ function dotfiles.git {
 
 function palm.aws.auth {
 
-PROD_AWS_PROFILE="palm-production"
-DEV_AWS_PROFILE="palm-development"
-DEFAULT_PROFILE="$DEV_AWS_PROFILE"
+  PROD_AWS_PROFILE="palm-production"
+  DEV_AWS_PROFILE="palm-development"
+  DEFAULT_PROFILE="$DEV_AWS_PROFILE"
 
-if test -z $1; then return 1; fi;
+  if test -z $1; then
+    return 1;
+  fi;
 
-  if test "$1" == "PROD"; then DEFAULT_PROFILE="$PROD_AWS_PROFILE"; fi
+  if test "$1" == "PROD"; then
+    DEFAULT_PROFILE="$PROD_AWS_PROFILE";
+  fi
 
   aws sso login --profile $DEFAULT_PROFILE && \
     eval "$(aws configure export-credentials --profile $DEFAULT_PROFILE --format env)"
-      export AWS_PROFILE="$DEFAULT_PROFILE"
-    }
+  export AWS_PROFILE="$DEFAULT_PROFILE"
+}
 
-    function palm.aws.k8s.auth {
-    local env="$1"
-    local region="us-east-1"
-    local profile cluster account context
+function palm.aws.k8s.auth {
+  local env="$1"
+  local region="us-east-1"
+  local profile cluster account context
 
-    case "${env:-DEV}" in
-      PROD)
-        profile="palm-production"
-        cluster="prod-eks"
-        ;;
-      DEV)
-        profile="palm-development"
-        cluster="dev-eks"
-        ;;
-      *)
-        echo "uso: palm.k8s.auth DEV|PROD"
-        return 1
-        ;;
-    esac
+  case "${env:-DEV}" in
+    PROD)
+      profile="palm-production"
+      cluster="prod-eks"
+      ;;
+    DEV)
+      profile="palm-development"
+      cluster="dev-eks"
+      ;;
+    *)
+      echo "uso: palm.k8s.auth DEV|PROD"
+      return 1
+      ;;
+  esac
 
-    aws sso login --profile "$profile" || return 1
-    eval "$(aws configure export-credentials --profile "$profile" --format env)" || return 1
+  aws sso login --profile "$profile" || return 1
+  eval "$(aws configure export-credentials --profile "$profile" --format env)" || return 1
 
-    aws eks update-kubeconfig \
-      --region "$region" \
-      --name "$cluster" \
-      --profile "$profile" || return 1
+  aws eks update-kubeconfig \
+    --region "$region" \
+    --name "$cluster" \
+    --profile "$profile" || return 1
 
-    account="$(aws sts get-caller-identity --query Account --output text)" || return 1
-    context="arn:aws:eks:${region}:${account}:cluster/${cluster}"
+  account="$(aws sts get-caller-identity --query Account --output text)" || return 1
+  context="arn:aws:eks:${region}:${account}:cluster/${cluster}"
 
-    kubectl config use-context "$context" || return 1
+  kubectl config use-context "$context" || return 1
 
-    export PALM_AWS_PROFILE="$profile"
-    export PALM_EKS_CLUSTER="$cluster"
-    export PALM_KUBE_CONTEXT="$context"
+  export PALM_AWS_PROFILE="$profile"
+  export PALM_EKS_CLUSTER="$cluster"
+  export PALM_KUBE_CONTEXT="$context"
 
-    echo "$PALM_KUBE_CONTEXT"
-  }
+  echo "$PALM_KUBE_CONTEXT"
+}
 
-  function palm.airflow.scheduler-pod {
+function palm.airflow.scheduler-pod {
   local namespace="${1:-ops-airflow}"
 
   kubectl --context "$PALM_KUBE_CONTEXT" get pods -n "$namespace" \
     -o name | grep scheduler | head -n 1 | sed 's|^pod/||'
-  }
+}
 
-  function palm.airflow.enable {
+function palm.airflow.enable {
   local dag_id="$1"
   local namespace="${2:-ops-airflow}"
   local pod
@@ -234,9 +238,9 @@ if test -z $1; then return 1; fi;
 
   kubectl --context "$PALM_KUBE_CONTEXT" exec -n "$namespace" "$pod" -- \
     airflow dags unpause "$dag_id"
-  }
+}
 
-  function palm.airflow.disable {
+function palm.airflow.disable {
   local dag_id="$1"
   local namespace="${2:-ops-airflow}"
   local pod
@@ -256,86 +260,94 @@ if test -z $1; then return 1; fi;
 
   kubectl --context "$PALM_KUBE_CONTEXT" exec -n "$namespace" "$pod" -- \
     airflow dags pause "$dag_id"
-  }
+}
 
 
-  function palm.airflow.trigger {
+function palm.airflow.trigger {
   local dag_id="$1"
   local config="$2"
   local namespace="${3:-ops-airflow}"
   local pod
 
-        #if [[ -z "$dag_id" || -z "$config" ]]; then
-        if [[ -z "$dag_id" ]]; then
-          echo "uso: palm.airflow.trigger DAG_ID LOGICAL_DATE [NAMESPACE]"
-          return 1
-        fi
+  #if [[ -z "$dag_id" || -z "$config" ]]; then
+  if [[ -z "$dag_id" ]]; then
+    echo "uso: palm.airflow.trigger DAG_ID LOGICAL_DATE [NAMESPACE]"
+    return 1
+  fi
 
-        pod="$(palm.airflow.scheduler-pod "$namespace")" || return 1
-        echo $pod
+  pod="$(palm.airflow.scheduler-pod "$namespace")" || return 1
+  echo $pod
 
-        if [[ -z "$pod" ]]; then
-          echo "scheduler pod no encontrado"
-          return 1
-        fi
+  if [[ -z "$pod" ]]; then
+    echo "scheduler pod no encontrado"
+    return 1
+  fi
 
-        kubectl --context "$PALM_KUBE_CONTEXT" exec -n "$namespace" "$pod" -- \
-          airflow dags trigger "$dag_id" --conf "$config"
-        }
+  kubectl --context "$PALM_KUBE_CONTEXT" exec -n "$namespace" "$pod" -- \
+    airflow dags trigger "$dag_id" --conf "$config"
+}
 
-        function palm.data-pipeline.prepare {
+function palm.data-pipeline.prepare {
 
-        PROD_AWS_PROFILE="palm-production"
-        DEV_AWS_PROFILE="palm-development"
-        DEFAULT_PROFILE="$DEV_AWS_PROFILE"
+  PROD_AWS_PROFILE="palm-production"
+  DEV_AWS_PROFILE="palm-development"
+  DEFAULT_PROFILE="$DEV_AWS_PROFILE"
 
-        if test -z $1; then return 1; fi;
+  if test -z $1; then
+    return 1;
+  fi;
 
-          if test "$1" == "PROD"; then DEFAULT_PROFILE="$PROD_AWS_PROFILE"; fi
-          palm.aws.auth ${DEFAULT_PROFILE};
-          bash script/credentials.sh;
-          set -a && source .env && set +a;
-        }
+  if test "$1" == "PROD"; then
+    DEFAULT_PROFILE="$PROD_AWS_PROFILE";
+  fi
+  palm.aws.auth ${DEFAULT_PROFILE};
+  bash script/credentials.sh;
+  set -a && source .env && set +a;
+}
 
-        function palm.data-pipeline.run {
-        test -z "$1" && return 0;
-        test -z "$2" && return 0;
-        test -z "$3" && return 0;
-        set -a && source .env && set +a;
-        START_DATE="$2" END_DATE="$3" ./gradlew --no-daemon run -Penvironment=local --args="local event$1";
-      }
+function palm.data-pipeline.run {
+  test -z "$1" && return 0;
+  test -z "$2" && return 0;
+  test -z "$3" && return 0;
+  set -a && source .env && set +a;
+  START_DATE="$2" END_DATE="$3" ./gradlew --no-daemon run -Penvironment=local --args="local event$1";
+}
 
-      function palm.identity-service.clean-env {
-      docker compose down --remove-orphans --volumes && \
-        docker compose up -d && \
-        yarn migration:init-schema && \
-        yarn migration:run
+function palm.identity-service.clean-env {
+  docker compose down --remove-orphans --volumes && \
+    docker compose up -d && \
+    yarn migration:init-schema && \
+    yarn migration:run
 
-      if test "$1" == "start"; then
-        yarn start:debug
-      fi
-    }
+  if test "$1" == "start"; then
+    yarn start:debug
+  fi
+}
 
-  function codex.palm {
-    CODEX_HOME="${HOME}/.codex-palm" codex "$@"
-  }
+function codex.palm {
+  CODEX_HOME="${HOME}/.codex-palm" codex "$@"
+}
 
-  function codex.me {
-    CODEX_HOME="${HOME}/.codex" codex "$@"
-  }
+function codex.me {
+  CODEX_HOME="${HOME}/.codex" codex "$@"
+}
 
-  # function opencode.palm {
-  #   export OPENCODE_CONFIG_DIR="${HOME}/.config/opencode-palm";
-  #   export OPENCODE_CONFIG="${OPENCODE_CONFIG_DIR}/opencode.json"
-  #   opencode "$@"
-  # }
-  #
-  # function opencode.me {
-  #   export OPENCODE_CONFIG_DIR="${HOME}/.config/opencode";
-  #   export OPENCODE_CONFIG="${OPENCODE_CONFIG_DIR}/opencode.json"
-  #   opencode "$@"
-  # }
-  
+
+function clean.oc {
+  for i in ${CONF} ${STATE} ${SHARE} ${CACHE}; do
+    echo "cleaning $i/opencode"
+    rm -rf $i/opencode || true;
+  done
+}
+
+function replace.oc {
+  OP="$1"
+  for i in ${CONF} ${STATE} ${SHARE} ${CACHE}; do
+    echo "replacing $i/${OP}"
+    ln -sf $i/${OP} $i/opencode;
+  done
+}
+
 function opencode.select {
   CONF="${HOME}/.config"
   STATE="${HOME}/.local/state"
@@ -346,23 +358,9 @@ function opencode.select {
   OC_PALM_CONF="$HOME/.config/opencode-palm"
   OC_ME_CONF="$HOME/.config/opencode-me"
   OC_CONF="${HOME}/.config/opencode"
-  PROFILE="$1"; shift;
+  PROFILE="$1"
+  shift
 
-  function clean.oc {
-
-    for i in ${CONF} ${STATE} ${SHARE} ${CACHE}; do
-      echo "cleaning $i/opencode"
-      rm -rf $i/opencode || true;
-    done
-  }
-
-  function replace.oc {
-    OP="$1"
-    for i in ${CONF} ${STATE} ${SHARE} ${CACHE}; do
-      echo "replacing $i/${OP}"
-      ln -sf $i/${OP} $i/opencode;
-    done
-  }
 
   if test -z $PROFILE; then
     echo "uso: opencode.select PROFILE [COMMANDS...]"
@@ -383,8 +381,37 @@ function opencode.select {
   opencode "$@"
 }
 
-  alias opencode.palm="opencode.select palm"
-  alias opencode.me="opencode.select me"
-  alias oc.palm="opencode.palm"
-  alias oc.me="opencode.me"
+alias opencode.palm="opencode.select palm"
+alias opencode.me="opencode.select me"
+alias oc.palm="opencode.palm"
+alias oc.me="opencode.me"
 
+export PROXY_VPN_PATH=~/.local/vpn-proxy
+
+function proxy.random.file {
+  FILENAME="vpn.conf"
+  CURRENT_PATH=$(pwd)
+  cd ${PROXY_VPN_PATH}/gluetun
+  FILE=$(find . -iname '*ovpn*' | shuf -n 1)
+  ln -rsf $FILE $FILENAME
+  cd $CURRENT_PATH
+}
+function proxy.start {
+  proxy.random.file
+  CURRENT_PATH=$(pwd)
+  cd ${PROXY_VPN_PATH}
+  docker compose up -d
+  cd $CURRENT_PATH
+}
+
+function proxy.stop {
+  CURRENT_PATH=$(pwd)
+  cd ${PROXY_VPN_PATH}
+  docker compose down --volumes
+  cd $CURRENT_PATH
+}
+
+function proxy.enable {
+  export http_proxy=http://127.0.0.1:8888
+  export https_proxy=http://127.0.0.1:8888
+}
