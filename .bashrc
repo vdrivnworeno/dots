@@ -324,65 +324,22 @@ function palm.identity-service.clean-env {
   fi
 }
 
-function codex.palm {
-  CODEX_HOME="${HOME}/.codex-palm" codex "$@"
-}
-
-function codex.me {
-  CODEX_HOME="${HOME}/.codex" codex "$@"
-}
-
-
-function clean.oc {
-  for i in ${CONF} ${STATE} ${SHARE} ${CACHE}; do
-    echo "cleaning $i/opencode"
-    rm -rf $i/opencode || true;
-  done
-}
-
-function replace.oc {
-  OP="$1"
-  for i in ${CONF} ${STATE} ${SHARE} ${CACHE}; do
-    echo "replacing $i/${OP}"
-    ln -sf $i/${OP} $i/opencode;
-  done
-}
-
-function opencode.select {
-  CONF="${HOME}/.config"
-  STATE="${HOME}/.local/state"
-  SHARE="${HOME}/.local/share"
-  CACHE="${HOME}/.cache"
-  PALM="opencode-palm"
-  ME="opencode-me"
-  OC_PALM_CONF="$HOME/.config/opencode-palm"
-  OC_ME_CONF="$HOME/.config/opencode-me"
-  OC_CONF="${HOME}/.config/opencode"
-  PROFILE="$1"
-  shift
-
-
-  if test -z $PROFILE; then
-    echo "uso: opencode.select PROFILE [COMMANDS...]"
-    echo "Profiles disponibles: palm, me"
-    return 1
-  fi
-
-  clean.oc
-
-  if test "$PROFILE" == "palm"; then
-    echo "Palm profile"
-    replace.oc $PALM
-  elif test "$PROFILE" == "me"; then
-    echo "Me profile"
-    replace.oc $ME
-  fi
-
+function opencode.palm {
+  HME="${HOME}/.opencode.palm"
+  XDG_CONFIG_HOME="$HME/config" \
+  XDG_DATA_HOME="$HME/data" \
+  XDG_CACHE_HOME="$HME/cache" \
+  XDG_STATE_HOME="$HME/state" \
   opencode "$@"
 }
-
-alias opencode.palm="opencode.select palm"
-alias opencode.me="opencode.select me"
+function opencode.me {
+  HME="${HOME}/.opencode.me"
+  XDG_CONFIG_HOME="$HME/config" \
+  XDG_DATA_HOME="$HME/data" \
+  XDG_CACHE_HOME="$HME/cache" \
+  XDG_STATE_HOME="$HME/state" \
+  opencode "$@"
+}
 alias oc.palm="opencode.palm"
 alias oc.me="opencode.me"
 
@@ -408,6 +365,13 @@ function proxy.stop {
   CURRENT_PATH=$(pwd)
   cd ${PROXY_VPN_PATH}
   docker compose down --volumes
+  cd $CURRENT_PATH
+}
+
+function proxy.status {
+  CURRENT_PATH=$(pwd)
+  cd ${PROXY_VPN_PATH}
+  docker compose logs -f
   cd $CURRENT_PATH
 }
 
